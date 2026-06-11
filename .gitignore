@@ -1,0 +1,16 @@
+# Python build and cache artifacts
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+venv/
+env/
+
+# Node.js dependencies
+node_modules/
+dist/
+.eslintcache
+
+# Operating System specific files
+.DS_Store
+Thumbs.db
