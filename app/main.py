@@ -2,6 +2,15 @@ from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 from app.engine import run_prediction_engine
+import os
+import pandas as pd
+
+# 1. Place the dynamic path resolution right under your imports
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_PATH = os.path.join(BASE_DIR, 'data', 'cleaned_josaa_data.csv')
+
+# 2. Update your pandas loading line to use DATA_PATH instead of a string shortcut
+df = pd.read_csv(DATA_PATH)
 
 app = FastAPI(title="JoSAA College Predictor API")
 
@@ -20,7 +29,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-DATA_PATH = "data/cleaned_josaa_data.csv"
 print("⚡ Loading historical database into RAM...")
 josaa_dataframe = pd.read_csv(DATA_PATH)
 print("✅ Database loaded successfully.")
