@@ -175,7 +175,7 @@ function App() {
       });
       if (formData.advancedRank.trim() !== '') queryParams.append('advanced_rank', formData.advancedRank);
 
-      const response = await fetch(`https://josaa-backend-api-ock8.onrender.com/predict?${queryParams}`);
+      const response = await fetch(`https://josaa-backend-api-ock8.onrender.com/predict/?${queryParams}`);
       const data = await response.json();
 
       if (response.ok) {

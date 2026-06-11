@@ -37,7 +37,7 @@ print("✅ Database loaded successfully.")
 def home():
     return {"status": "Online", "message": "Welcome to the JoSAA Predictor API Engine"}
 
-@app.get("/predict")
+@app.get("/predict/")
 def predict(
     rank: int, 
     category: str, 
