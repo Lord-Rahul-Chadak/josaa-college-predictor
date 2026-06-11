@@ -45,7 +45,7 @@ def predict(
     quota: str, 
     institute: str = Query(default=""), 
     branch: str = Query(default=""),
-    advanced_rank: int = Query(default=None)  # <-- ADDED OPTIONAL PARAMETER
+    advanced_rank: int = None  # <-- ADDED OPTIONAL PARAMETER
 ):
     predictions = run_prediction_engine(
         df=josaa_dataframe, 
