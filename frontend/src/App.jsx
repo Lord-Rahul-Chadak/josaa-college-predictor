@@ -21,100 +21,116 @@ function App() {
   const urlParams = new URLSearchParams(window.location.search);
   const isMapViewTab = urlParams.get('view') === 'map';
 
+  // React Hooks Lifecycle compliance (Moved out of conditional blocks)
+  const mapContainerRef = useRef(null);
+  const mapObjectRef = useRef(null);
+  const [mapData, setMapData] = useState([]);
+
+  const [formData, setFormData] = useState({
+    rank: '', advancedRank: '', category: 'OPEN', gender: 'Gender-Neutral', quota: 'AI', institute: '', branch: ''
+  });
+
+  const [results, setResults] = useState([]);
+  const [totalOptions, setTotalOptions] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
+
+  const [activeMasterTab, setActiveMasterTab] = useState('Other');
+  const [activeSubTab, setActiveSubTab] = useState('Safe');
+  const [visibleCount, setVisibleCount] = useState(20);
+
   // ------------------------------------------------------------------------
-  // SUB-COMPONENT ROUTE A: IMMERSIVE MULTI-COLOR MAP SCREEN
+  // SUB-COMPONENT ROUTE A: IMMERSIVE MULTI-COLOR MAP VIEWPORT
   // ------------------------------------------------------------------------
-  if (isMapViewTab) {
-    const mapContainerRef = useRef(null);
-    const mapObjectRef = useRef(null);
-    const [mapData, setMapData] = useState([]);
+  useEffect(() => {
+    if (!isMapViewTab) return;
 
-    useEffect(() => {
-      const savedRaw = localStorage.getItem('josaa_map_payload');
-      const parsedData = savedRaw ? JSON.parse(savedRaw) : [];
-      setMapData(parsedData);
+    const savedRaw = localStorage.getItem('josaa_map_payload');
+    const parsedData = savedRaw ? JSON.parse(savedRaw) : [];
+    setMapData(parsedData);
 
-      if (!window.L) {
-        const css = document.createElement('link');
-        css.rel = 'stylesheet'; css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-        document.head.appendChild(css);
+    if (!window.L) {
+      const css = document.createElement('link');
+      css.rel = 'stylesheet'; css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(css);
 
-        const js = document.createElement('script');
-        js.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-        js.async = true;
-        js.onload = () => initMap(parsedData);
-        document.body.appendChild(js);
-      } else {
-        initMap(parsedData);
-      }
+      const js = document.createElement('script');
+      js.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      js.async = true;
+      js.onload = () => initMap(parsedData);
+      document.body.appendChild(js);
+    } else {
+      initMap(parsedData);
+    }
 
-      function initMap(dataset) {
-        if (!mapContainerRef.current || mapObjectRef.current) return;
+    function initMap(dataset) {
+      if (!mapContainerRef.current || mapObjectRef.current) return;
+      
+      const map = window.L.map(mapContainerRef.current).setView([22.9734, 78.6568], 5);
+      
+      window.L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+      }).addTo(map);
+
+      window.L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png').addTo(map);
+
+      const bounds = [];
+      dataset.forEach(row => {
+        const instLower = row.Institute.toLowerCase();
+        let coords = null;
         
-        const map = window.L.map(mapContainerRef.current).setView([22.9734, 78.6568], 5);
-        
-        window.L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
-          attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
-        }).addTo(map);
-
-        window.L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png').addTo(map);
-
-        const bounds = [];
-        dataset.forEach(row => {
-          const instLower = row.Institute.toLowerCase();
-          let coords = null;
-          
-          for (const key in COLLEGE_COORDINATES) {
-            const regex = new RegExp('\\b' + key + '\\b', 'i');
-            if (regex.test(instLower)) { coords = COLLEGE_COORDINATES[key]; break; }
-          }
-
-          if (coords) {
-            bounds.push(coords);
-
-            let dotColor = '#166534';
-            let statusText = 'Safe Bets 🟢';
-            
-            if (row.Admission_Chance.includes('Moderate')) {
-              dotColor = '#f59e0b';
-              statusText = 'Moderate Target 🟡';
-            } else if (row.Admission_Chance.includes('Risky')) {
-              dotColor = '#dc2626';
-              statusText = 'Ambitious Reach 🔴';
-            }
-
-            const marker = window.L.circleMarker(coords, {
-              radius: row.isLiveMatch ? 12 : 8,
-              fillColor: dotColor,
-              color: '#ffffff', 
-              weight: 2,
-              fillOpacity: 0.85
-            });
-
-            marker.bindPopup(`
-              <div style="font-family: system-ui, sans-serif; font-size:12px; min-width:220px; padding:2px;">
-                <b style="color: #0a2417; font-size:13px; display:block; margin-bottom:4px;">${row.Institute}</b>
-                <div style="color: #475569; margin-bottom:6px; line-height:1.4;">${row.Branch}</div>
-                <hr style="border:0; border-top:1px solid #e2e8f0; margin:6px 0;" />
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                  <span style="font-size:11px; font-weight:700; color:#475569;">${statusText}</span>
-                  <span style="font-weight:800; color:${dotColor}; font-size:13px;">Cutoff: ${row.Median_Cutoff.toLocaleString('en-IN')}</span>
-                </div>
-              </div>
-            `);
-            marker.addTo(map);
-          }
-        });
-
-        if (bounds.length > 0) {
-          map.fitBounds(bounds, { padding: [60, 60], maxZoom: 6 });
-        } else {
-          map.setView([22.9734, 78.6568], 5);
+        for (const key in COLLEGE_COORDINATES) {
+          const regex = new RegExp('\\b' + key + '\\b', 'i');
+          if (regex.test(instLower)) { coords = COLLEGE_COORDINATES[key]; break; }
         }
-        mapObjectRef.current = map;
-      }
-    }, []);
 
+        if (coords) {
+          bounds.push(coords);
+
+          let dotColor = '#166534';
+          let statusText = 'Safe Bets 🟢';
+          
+          if (row.Admission_Chance.includes('Moderate')) {
+            dotColor = '#f59e0b';
+            statusText = 'Moderate Target 🟡';
+          } else if (row.Admission_Chance.includes('Risky')) {
+            dotColor = '#dc2626';
+            statusText = 'Ambitious Reach 🔴';
+          }
+
+          const marker = window.L.circleMarker(coords, {
+            radius: row.isLiveMatch ? 12 : 8,
+            fillColor: dotColor,
+            color: '#ffffff', 
+            weight: 2,
+            fillOpacity: 0.85
+          });
+
+          marker.bindPopup(`
+            <div style="font-family: system-ui, sans-serif; font-size:12px; min-width:220px; padding:2px;">
+              <b style="color: #0a2417; font-size:13px; display:block; margin-bottom:4px;">${row.Institute}</b>
+              <div style="color: #475569; margin-bottom:6px; line-height:1.4;">${row.Branch}</div>
+              <hr style="border:0; border-top:1px solid #e2e8f0; margin:6px 0;" />
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:11px; font-weight:700; color:#475569;">${statusText}</span>
+                <span style="font-weight:800; color:${dotColor}; font-size:13px;">Cutoff: ${row.Median_Cutoff.toLocaleString('en-IN')}</span>
+              </div>
+            </div>
+          `);
+          marker.addTo(map);
+        }
+      });
+
+      if (bounds.length > 0) {
+        map.fitBounds(bounds, { padding: [60, 60], maxZoom: 6 });
+      } else {
+        map.setView([22.9734, 78.6568], 5);
+      }
+      mapObjectRef.current = map;
+    }
+  }, [isMapViewTab]);
+
+  if (isMapViewTab) {
     return (
       <div style={{ width: '100vw', height: '100vh', position: 'relative', fontFamily: 'sans-serif' }}>
         <div style={{ position: 'absolute', top: '15px', left: '60px', zIndex: 1000, backgroundColor: '#0a2417', color: '#fff', padding: '12px 20px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.15)', borderBottom: '2px solid #d4af37' }}>
@@ -141,21 +157,8 @@ function App() {
   }
 
   // ------------------------------------------------------------------------
-  // SUB-COMPONENT ROUTE B: FULL SCREEN DASHBOARD VIEWPORT
+  // SUB-COMPONENT ROUTE B: MAIN ANALYTICS DASHBOARD VIEWPORT
   // ------------------------------------------------------------------------
-  const [formData, setFormData] = useState({
-    rank: '', advancedRank: '', category: 'OPEN', gender: 'Gender-Neutral', quota: 'AI', institute: '', branch: ''
-  });
-
-  const [results, setResults] = useState([]);
-  const [totalOptions, setTotalOptions] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [searched, setSearched] = useState(false);
-
-  const [activeMasterTab, setActiveMasterTab] = useState('Other');
-  const [activeSubTab, setActiveSubTab] = useState('Safe');
-  const [visibleCount, setVisibleCount] = useState(20);
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -183,9 +186,10 @@ function App() {
         setResults(fetchedResults);
         setTotalOptions(data.total_options_found || 0);
         
+        // Accurate explicit filtering condition for real IIT systems
         const hasIITs = fetchedResults.some(r => {
           const n = r.Institute.toLowerCase();
-          return n.includes('technology') && !n.includes('national') && !n.includes('information');
+          return n.includes('indian institute of technology') && !n.includes('engineering science');
         });
 
         if (formData.advancedRank.trim() !== '' && hasIITs) {
@@ -202,9 +206,10 @@ function App() {
     }
   };
 
+  // Bulletproof institutional separation logic
   const iitPool = results.filter(r => {
     const n = r.Institute.toLowerCase();
-    return n.includes('technology') && !n.includes('national') && n.includes('information') === false;
+    return n.includes('indian institute of technology') && !n.includes('engineering science');
   });
   const otherPool = results.filter(r => !iitPool.includes(r));
   
@@ -246,7 +251,6 @@ function App() {
   };
   const ui = getDynamicStyles();
 
-  // 🎯 FIXED DETACHED COUPLING: Pulls strictly from paginatedDataset batch boundaries (20 -> 40 -> 60)
   const handleOpenMapWindow = () => {
     localStorage.setItem('josaa_map_payload', JSON.stringify(paginatedDataset));
     window.open(window.location.pathname + '?view=map', '_blank');
@@ -276,7 +280,7 @@ function App() {
             .header-banner { border-bottom: 3px solid #d4af37; padding-bottom: 12px; margin-bottom: 24px; }
             .meta-card { background: #f4f7f5; border: 1px solid #d1eae1; padding: 16px; border-radius: 12px; margin-bottom: 30px; }
             .meta-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; font-size: 12px; }
-            .meta-label { font-weight: 700; color: #3f5147; font-size: 10px; text-transform: uppercase; }
+            .meta-label { font-weight: 700; color: #3f5147; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
             .meta-val { font-size: 13px; font-weight: 600; margin-top: 2px; }
             .section-header { font-size: 13px; font-weight: 800; padding: 8px 14px; border-radius: 6px; margin-top: 28px; margin-bottom: 12px; text-transform: uppercase; }
             .sh-safe { background-color: #dcfce7; color: #15803d; border-left: 5px solid #166534; }
@@ -498,7 +502,7 @@ const styles = {
   masterTabContainer: { display: 'flex', gap: '4px', backgroundColor: '#d1eae1', borderRadius: '16px 16px 0 0', padding: '6px 6px 0 6px' },
   masterTab: { flex: 1, padding: '14px', border: 0, borderRadius: '12px 12px 0 0', cursor: 'pointer', fontSize: '14px', fontWeight: '700', color: '#2c3e35', backgroundColor: 'transparent', transition: 'all 0.15s ease' },
   masterTabActive: { backgroundColor: '#ffffff', color: '#0a2417 !important', boxShadow: '0 -2px 10px rgba(0,0,0,0.02)' },
-  subTabContainer: { display: 'flex', gap: '12px', padding: '16px 20px', backgroundColor: '#ffffff', borderX: '1px solid #d1eae1', borderBottom: '2px solid #e2e8f0' },
+  subTabContainer: { display: 'flex', gap: '12px', padding: '16px 20px', backgroundColor: '#ffffff', borderLeft: '1px solid #d1eae1', borderRight: '1px solid #d1eae1', borderBottom: '2px solid #e2e8f0' },
   subTab: { padding: '10px 20px', borderRadius: '30px', cursor: 'pointer', fontSize: '13px', fontWeight: '700', transition: 'all 0.2s', outline: 'none' },
   subInactiveSafe: { backgroundColor: '#ffffff', color: '#166534', border: '2px solid #bbf7d0' },
   subInactiveMod: { backgroundColor: '#ffffff', color: '#b45309', border: '2px solid #fde68a' },
