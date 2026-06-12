@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 
 // Geographical Coordinate Index for Indian Engineering Institutions
 const COLLEGE_COORDINATES = {
@@ -322,6 +323,7 @@ function App() {
 
   return (
     <div style={styles.container}>
+      <Analytics />
       <style>{`
         html, body, #root { background-color: #f4f7f5 !important; color: #0a2417 !important; color-scheme: light !important; }
         input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
