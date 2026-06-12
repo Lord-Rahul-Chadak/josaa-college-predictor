@@ -209,8 +209,8 @@ function App() {
 
   // Bulletproof institutional separation logic
   const iitPool = results.filter(r => {
-    const n = r.Institute.toLowerCase();
-    return n.includes('indian institute of technology') && !n.includes('engineering science');
+  const n = r.Institute.toLowerCase();
+  return (n.includes('indian institute of technology') || n.includes('iit')) && !n.includes('engineering science');
   });
   const otherPool = results.filter(r => !iitPool.includes(r));
   
@@ -253,7 +253,7 @@ function App() {
   const ui = getDynamicStyles();
 
   const handleOpenMapWindow = () => {
-    localStorage.setItem('josaa_map_payload', JSON.stringify(paginatedDataset));
+    localStorage.setItem('josaa_map_payload', JSON.stringify(displayedDataset));
     window.open(window.location.pathname + '?view=map', '_blank');
   };
 
