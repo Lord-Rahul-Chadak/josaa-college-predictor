@@ -209,9 +209,15 @@ function App() {
 
   // Bulletproof institutional separation logic
   const iitPool = results.filter(r => {
-  const n = r.Institute.toLowerCase();
-  return (n.includes('indian institute of technology') || n.includes('iit')) && !n.includes('engineering science');
+    const n = r.Institute.toLowerCase();
+    
+    const hasIITIdentifiers = n.includes('indian institute of technology') || n.includes('iit');
+    const hasIIITIdentifiers = n.includes('information') || n.includes('iiit');
+
+    // Must have IIT keywords, must NOT have IIIT keywords, and ignore engineering science
+    return hasIITIdentifiers && !hasIIITIdentifiers && !n.includes('engineering science');
   });
+
   const otherPool = results.filter(r => !iitPool.includes(r));
   
   const masterSet = activeMasterTab === 'IIT' ? iitPool : otherPool;
